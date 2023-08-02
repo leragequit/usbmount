@@ -88,6 +88,16 @@ if [ "$1" = add ]; then
     # a service's context and the env variables have been lost)
     eval $(udevadm info --query=env --export "$DEVNAME" | grep -v '^[^=]*\..*=')
 
+    # Extract VID and PID from the udev information
+    VID="$ID_VENDOR_ID"
+    PID="$ID_MODEL_ID"
+
+    # Check if the VID and PID match the specified criteria
+    if [ "$VID" = "0424" ] && [ "$PID" = "4050" ]; then
+        log info "USB device with VID=$VID and PID=$PID. Not mounting the device."
+        exit 0
+    fi
+
     # Grab device information from device and "divide it"
     #   FIXME: improvement: implement mounting by label (notice that labels
     #   can contain spaces, which makes things a little bit less comfortable).
