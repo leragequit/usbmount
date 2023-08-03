@@ -1,8 +1,8 @@
 #!/bin/sh
 # This script mounts USB mass storage devices when they are plugged in
 # and unmounts them when they are removed.
-# Copyright © 2004, 2005 Martin Dickopp
-# Copyright © 2008-2012 Rogério Theodoro de Brito
+# Copyright Â© 2004, 2005 Martin Dickopp
+# Copyright Â© 2008-2012 RogÃ©rio Theodoro de Brito
 #
 # This file is free software; the copyright holder gives unlimited
 # permission to copy and/or distribute it, with or without
@@ -48,7 +48,7 @@ MOUNTPOINTS=
 FILESYSTEMS=
 MOUNTOPTIONS=
 FS_MOUNTOPTIONS=
-VERBOSE=no
+VERBOSE=yes
 
 if [ -r /etc/usbmount/usbmount.conf ]; then
     . /etc/usbmount/usbmount.conf
@@ -87,16 +87,27 @@ if [ "$1" = add ]; then
     # Query udev for the expected device information (as we are now running in
     # a service's context and the env variables have been lost)
     eval $(udevadm info --query=env --export "$DEVNAME" | grep -v '^[^=]*\..*=')
-
-    # Extract VID and PID from the udev information
-    VID="$ID_VENDOR_ID"
-    PID="$ID_MODEL_ID"
-
-    # Check if the VID and PID match the specified criteria
-    if [ "$VID" = "0424" ] && [ "$PID" = "4050" ]; then
-        log info "USB device with VID=$VID and PID=$PID. Not mounting the device."
-        exit 0
+    
+    BUSNUM=$(udevadm info --query=path --name=$DEVNAME | grep -oP '1-1(\.\d+)+' | awk '{ print length, $0 }' | sort -nr | head -1 | cut -d' ' -f2- )
+    log debug "TESTING $BUSNUM found for PID $$"
+    
+    # Check if the longest path starts with 1-1.4.1
+    log debug "Checking if $BUSNUM starts with 1-1.4.1 for PID $$"
+    if [[ $BUSNUM == 1-1.4.1* ]]; then
+        log debug "The device starts with 1-1.4.1, ignoring it for PID $$"
+        exit 1
     fi
+
+    # if at first we don't succeed 
+    case $BUSNUM in
+    1-1.4.1*)
+        log debug "The device starts with 1-1.4.1, ignoring it for PID $$"
+        exit 1
+        ;;
+    *)
+        log debug "The device does not start with 1-1.4.1 for PID $$"
+        ;;
+    esac
 
     # Grab device information from device and "divide it"
     #   FIXME: improvement: implement mounting by label (notice that labels
